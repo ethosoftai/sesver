@@ -1,0 +1,68 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Bagimliliklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check src tests
+
+      - name: Testler
+        run: python -m pytest -q
+
+      # Cekirdek sifir bagimlilikla kosmali. Bu adim, ileride sessizce
+      # eklenen bir bagimliligi yakalar.
+      - name: Cekirdek bagimliliksiz kosuyor mu
+        run: |
+          python -c "import sys; assert sys.version_info >= (3,10)"
+          PYTHONPATH=src python -m sesver.cli demo --messages 800 > /dev/null
+          echo "cekirdek bagimliliksiz kostu"
+
+      - name: Degerlendirme kapisi
+        run: |
+          PYTHONPATH=src python -m sesver.cli bench --messages 8000 --seed 7 --json bench.json
+          python - <<'PY'
+          import json, sys
+          r = json.load(open("bench.json", encoding="utf-8"))
+          hatalar = []
+          # Yardim cagrisi kacirmak geri donusu olmayan hatadir.
+          if r["triyaj"]["kacan"] != 0:
+              hatalar.append(f"kacan cagri: {r['triyaj']['kacan']} (hedef 0)")
+          if r["triyaj"]["anma"] < 0.99:
+              hatalar.append(f"triyaj anmasi dustu: {r['triyaj']['anma']}")
+          # Iki farkli enkazin tek goreve inmesi ikinci binayi gorunmez kilar.
+          if r["tekillestirme"]["saflik"] < 0.95:
+              hatalar.append(f"kume safligi dustu: {r['tekillestirme']['saflik']}")
+          if r["bastirma"]["gercek_kaybi"] != 0:
+              hatalar.append(f"gercek gorev kaybi: {r['bastirma']['gercek_kaybi']} (hedef 0)")
+          if hatalar:
+              print("DEGERLENDIRME KAPISI KAPALI:")
+              for h in hatalar:
+                  print("  -", h)
+              sys.exit(1)
+          print("degerlendirme kapisi acik")
+          PY
+
+      - name: Zehirleme testi
+        run: PYTHONPATH=src python -m sesver.cli poison --messages 8000 --poison 100 --mode gercekci

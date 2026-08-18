@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+# model ve veri agirliklari repoda tutulmaz
+checkpoints/
+runs/
+*.safetensors
+*.gguf
+*.bin
+data/raw/
+data/gold/*.jsonl
+!data/gold/.gitkeep
+logs/
+*.out
+*.err

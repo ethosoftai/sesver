@@ -1,0 +1,76 @@
+{
+  "_not": "Ornek/demo sozlugudur. Uretimde UAVT (Ulusal Adres Veri Tabani) ve bina envanteri kullanilir. Koordinatlar yaklasiktir ve yalnizca kosum/degerlendirme icindir.",
+  "_kaynak": "demo",
+  "iller": {
+    "Hatay": {
+      "ilceler": {
+        "Antakya": {
+          "merkez": [36.2023, 36.1613],
+          "mahalleler": {
+            "Armutlu": [36.2077, 36.1524],
+            "Sumerler": [36.2005, 36.1580],
+            "Akevler": [36.1948, 36.1495],
+            "Ulucami": [36.2019, 36.1638],
+            "Cebrail": [36.1962, 36.1671],
+            "Gazi": [36.2110, 36.1602],
+            "Odabasi": [36.1873, 36.1712]
+          }
+        },
+        "Defne": {
+          "merkez": [36.1725, 36.1832],
+          "mahalleler": {
+            "Harbiye": [36.1345, 36.1401],
+            "Kuzeytepe": [36.2401, 36.1189],
+            "Serinyol": [36.3182, 36.1725],
+            "Ekinci": [36.1620, 36.2010]
+          }
+        },
+        "Iskenderun": {
+          "merkez": [36.5872, 36.1730],
+          "mahalleler": {
+            "Cay": [36.5901, 36.1688],
+            "Numune": [36.5824, 36.1755],
+            "Bekbele": [36.6002, 36.1640]
+          }
+        }
+      }
+    },
+    "Kahramanmaras": {
+      "ilceler": {
+        "Onikisubat": {
+          "merkez": [37.5858, 36.9371],
+          "mahalleler": {
+            "Yenisehir": [37.5820, 36.9302],
+            "Ismetpasa": [37.5901, 36.9285],
+            "Dulkadiroglu": [37.5772, 36.9440],
+            "Karacasu": [37.6012, 36.9188]
+          }
+        },
+        "Elbistan": {
+          "merkez": [38.2065, 37.1954],
+          "mahalleler": {
+            "Cumhuriyet": [38.2091, 37.1902],
+            "Guneskent": [38.2004, 37.2011]
+          }
+        }
+      }
+    },
+    "Adiyaman": {
+      "ilceler": {
+        "Merkez": {
+          "merkez": [37.7648, 38.2786],
+          "mahalleler": {
+            "Yenipinar": [37.7702, 38.2731],
+            "Siteler": [37.7591, 38.2840],
+            "Altinsehir": [37.7660, 38.2905]
+          }
+        }
+      }
+    }
+  },
+  "barajlar": {
+    "Ataturk Baraji": { "il": "Sanliurfa", "koordinat": [37.4839, 38.3211] },
+    "Sir Baraji": { "il": "Kahramanmaras", "koordinat": [37.7086, 36.7211] },
+    "Yesilirmak Baraji": { "il": "Hatay", "koordinat": [36.3401, 36.2288] }
+  }
+}

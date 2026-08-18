@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sesver"
+version = "0.1.0"
+description = "Afet aninda sosyal medya gurultusunu dogrulanmis kurtarma gorev listesine ceviren ajan sistemi"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "SES VER Takimi" }]
+keywords = ["afet", "kriz-bilisimi", "dogrulama", "turkce-nlp", "afad"]
+
+# Cekirdek SIFIR bagimlilikla calisir. Kural tabanli hat, sentetik veri
+# ureteci, degerlendirme kosumu ve yonlendirme motoru yalnizca stdlib kullanir.
+dependencies = []
+
+[project.optional-dependencies]
+api = ["fastapi>=0.110", "uvicorn>=0.29"]
+train = ["torch>=2.3", "transformers>=4.44", "peft>=0.12", "trl>=0.9", "datasets>=2.20", "accelerate>=0.33"]
+serve = ["vllm>=0.5"]
+dev = ["pytest>=8", "ruff>=0.5"]
+
+[project.scripts]
+sesver = "sesver.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
