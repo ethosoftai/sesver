@@ -5,7 +5,7 @@
 TEKNOFEST 2026 · NSosyal Inovasyon Yarismasi · Sosyal Yapay Zeka dikeyi
 
 ```bash
-git clone https://github.com/Yagiz-D-Ekrem-Dolar/sesver
+git clone https://github.com/ethosoftai/sesver
 cd sesver
 python -m sesver.cli demo        # bagimlilik gerekmez, hemen kosar
 ```
