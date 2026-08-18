@@ -168,9 +168,9 @@ class Birlestirici:
 
         # Adresi zayif olan taraflarda (bina yok) metin benzerligi hala
         # gereklidir; aksi halde ayni mahallenin tum kaba cagrilari birlesir.
-        if not anahtar_ayni and (a.bina is None and b.bina is None):
-            if metin < ESIK.metin_benzerlik:
-                return None
+        zayif_adres = a.bina is None and b.bina is None
+        if not anahtar_ayni and zayif_adres and metin < ESIK.metin_benzerlik:
+            return None
 
         yakinlik = 1.0 if mesafe is None else max(0.0, 1.0 - mesafe / ESIK.mekan_yaricap_m)
         return 2.0 * float(anahtar_ayni) + metin + yakinlik

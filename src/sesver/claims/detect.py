@@ -10,8 +10,8 @@ from __future__ import annotations
 from itertools import count
 
 from ..metin import icerir, normalize
-from ..schemas import Iddia, IddiaTuru, Mesaj
 from ..pipeline.triage import EYLEM_EMRI
+from ..schemas import Iddia, IddiaTuru, Mesaj
 
 TUR_SOZLUGU: dict[IddiaTuru, tuple[str, ...]] = {
     IddiaTuru.BARAJ: ("baraj", "golet", "gölet", "su yapisi", "su yapısı", "sedde"),

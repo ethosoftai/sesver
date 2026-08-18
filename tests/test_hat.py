@@ -28,7 +28,6 @@ from sesver.schemas import (
     Tur,
 )
 
-
 # --- metin ---
 
 

@@ -23,8 +23,9 @@ Bu durum teknik raporda ve sunumda acikca belirtilir.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Protocol
+from typing import Protocol
 
 from ..schemas import IddiaTuru
 

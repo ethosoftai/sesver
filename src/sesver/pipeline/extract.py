@@ -17,12 +17,13 @@ kazancini bu taban cizgisine gore raporluyoruz.
 
 from __future__ import annotations
 
+import contextlib
 import re
 
 from ..config import CANLILIK_SOZCUKLER, KIRILGAN_SOZCUKLER
 from ..data.gazetteer import Gazetteer, varsayilan_gazetteer
 from ..metin import icerir, normalize, sayi_bul, yakin_esles
-from ..schemas import Cagri, Konum, Cozunurluk, Mesaj
+from ..schemas import Cagri, Cozunurluk, Konum, Mesaj
 
 # "5. sokak", "5.sok", "5 nolu sokak"
 _SOKAK = re.compile(r"(\d+)\s*\.?\s*(?:nolu\s+)?(?:sokak|sok|cadde|cad)\b")
@@ -130,10 +131,8 @@ class Cozumleyici:
 
         kat = _KAT.search(n)
         if kat:
-            try:
+            with contextlib.suppress(ValueError):
                 k.kat = int(kat.group(1))
-            except ValueError:
-                pass
         elif _ZEMIN.search(n):
             k.kat = 0
 
