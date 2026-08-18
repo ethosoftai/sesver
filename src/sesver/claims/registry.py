@@ -18,6 +18,10 @@ TEIAS, BOTAS, Borsa Istanbul) protokol ve yetkilendirme gerektirir; yarisma
 prototipinde gerceklenmemistir. Arayuz gercek entegrasyona birebir uyacak
 sekilde tasarlanmistir: ``VeriKaynagi`` uygulamasini degistirmek yeterlidir.
 Bu durum teknik raporda ve sunumda acikca belirtilir.
+
+Ayni not ``Kayit.mail`` alanlari icin de gecerlidir: asagidaki adresler
+ornektir, gercek kurum kutusu degildir. Uretimde bu alan gercek kurumsal
+adresle degistirilir.
 """
 
 from __future__ import annotations
@@ -60,6 +64,7 @@ class Kayit:
     otomatik_kontrol: bool     # makinece dogrulanabilir mi
     hedef_sn: float            # cevap hedefi
     kaynak: Callable[[str], Yanit | None] | None = None
+    mail: str = ""              # bildirim.py'nin mail atacagi kutu (simule adres)
 
 
 # --- Simule veri kaynaklari -------------------------------------------------
@@ -106,16 +111,39 @@ def _teias(metin: str) -> Yanit:
 # --- Kayit defteri ----------------------------------------------------------
 
 KAYIT_DEFTERI: dict[IddiaTuru, Kayit] = {
-    IddiaTuru.BARAJ: Kayit(IddiaTuru.BARAJ, "DSI", True, 30.0, _dsi),
-    IddiaTuru.FINANS: Kayit(IddiaTuru.FINANS, "Borsa Istanbul", True, 5.0, _borsa),
-    IddiaTuru.SISMIK: Kayit(IddiaTuru.SISMIK, "AFAD / Kandilli", True, 30.0, _afad),
-    IddiaTuru.ELEKTRIK: Kayit(IddiaTuru.ELEKTRIK, "TEIAS / EPDK", True, 60.0, _teias),
-    IddiaTuru.DOGALGAZ: Kayit(IddiaTuru.DOGALGAZ, "BOTAS", True, 60.0, None),
-    IddiaTuru.ULASIM: Kayit(IddiaTuru.ULASIM, "KGM", True, 60.0, None),
-    IddiaTuru.HAVA: Kayit(IddiaTuru.HAVA, "MGM", True, 30.0, None),
-    IddiaTuru.SAGLIK: Kayit(IddiaTuru.SAGLIK, "Saglik Bakanligi", False, 900.0, None),
-    IddiaTuru.ASAYIS: Kayit(IddiaTuru.ASAYIS, "Icisleri / Valilik", False, 900.0, None),
-    IddiaTuru.BILINMIYOR: Kayit(IddiaTuru.BILINMIYOR, "", False, 900.0, None),
+    IddiaTuru.BARAJ: Kayit(
+        IddiaTuru.BARAJ, "DSI", True, 30.0, _dsi, mail="dsi-izleme@ornek.gov.tr"
+    ),
+    IddiaTuru.FINANS: Kayit(
+        IddiaTuru.FINANS, "Borsa Istanbul", True, 5.0, _borsa, mail="borsa-izleme@ornek.gov.tr"
+    ),
+    IddiaTuru.SISMIK: Kayit(
+        IddiaTuru.SISMIK, "AFAD / Kandilli", True, 30.0, _afad, mail="afad-kandilli@ornek.gov.tr"
+    ),
+    IddiaTuru.ELEKTRIK: Kayit(
+        IddiaTuru.ELEKTRIK, "TEIAS / EPDK", True, 60.0, _teias, mail="teias-ariza@ornek.gov.tr"
+    ),
+    IddiaTuru.DOGALGAZ: Kayit(
+        IddiaTuru.DOGALGAZ, "BOTAS", True, 60.0, None, mail="botas-ariza@ornek.gov.tr"
+    ),
+    IddiaTuru.ULASIM: Kayit(
+        IddiaTuru.ULASIM, "KGM", True, 60.0, None, mail="kgm-trafik@ornek.gov.tr"
+    ),
+    IddiaTuru.HAVA: Kayit(
+        IddiaTuru.HAVA, "MGM", True, 30.0, None, mail="mgm-izleme@ornek.gov.tr"
+    ),
+    IddiaTuru.SAGLIK: Kayit(
+        IddiaTuru.SAGLIK, "Saglik Bakanligi", False, 900.0, None, mail="sabim@ornek.gov.tr"
+    ),
+    IddiaTuru.ASAYIS: Kayit(
+        IddiaTuru.ASAYIS,
+        "Icisleri / Valilik",
+        False,
+        900.0,
+        None,
+        mail="valilik-koordinasyon@ornek.gov.tr",
+    ),
+    IddiaTuru.BILINMIYOR: Kayit(IddiaTuru.BILINMIYOR, "", False, 900.0, None, mail=""),
 }
 
 

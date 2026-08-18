@@ -16,6 +16,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 
+from ..bildirim import Bildirimci
 from ..claims.backprop import GeriYayilim, YayilimAgaci
 from ..claims.breaker import DevreKesici
 from ..claims.detect import IddiaTespitci
@@ -59,7 +60,12 @@ class BoruHatti:
         kuyruk = hat.kuyruk()
     """
 
-    def __init__(self, triyaj: Triyajci | None = None, mod: Mod = Mod.AFET) -> None:
+    def __init__(
+        self,
+        triyaj: Triyajci | None = None,
+        mod: Mod = Mod.AFET,
+        bildirimci: Bildirimci | None = None,
+    ) -> None:
         self.mod = mod
         self.triyaj = triyaj or KuralTriyaj()
         self.cozumleyici = Cozumleyici()
@@ -68,6 +74,7 @@ class BoruHatti:
         self.onceliklendirici = Onceliklendirici()
         self.kapatici = Kapatici()
         self.yonlendirici = Yonlendirici()
+        self.bildirimci = bildirimci or Bildirimci()
 
         self.iddia_tespitci = IddiaTespitci()
         self.kesici = DevreKesici(mod=mod)
@@ -133,6 +140,7 @@ class BoruHatti:
 
         if self.kesici.ac(iddia, simdi=mesaj.ts):
             self.sayac.kesici_acilan += 1
+            self.bildirimci.iddia_tespit_edildi(iddia)
 
         kayit = yetkili_bul(iddia.tur)
         iddia.yetkili = kayit.yetkili or None
@@ -141,6 +149,7 @@ class BoruHatti:
         if yanit is not None:
             self.kesici.coz(iddia, yanit.ozet, yanit.damga, simdi=mesaj.ts + kayit.hedef_sn)
             self.sayac.kesici_cozulen += 1
+            self.bildirimci.iddia_sonuclandi(iddia)
             agac = YayilimAgaci(kok_mesaj=mesaj.id)
             for i in range(max(mesaj.paylasim, 1) * 20):
                 agac.goster(f"{mesaj.id}-u{i}")
@@ -166,6 +175,10 @@ class BoruHatti:
         t = time.perf_counter()
         sirali = self.onceliklendirici(gorevler, simdi)
         self.sayac.sure_ekle("onceliklendirme", time.perf_counter() - t)
+
+        for g in sirali:
+            self.bildirimci.gorev_yuksek_oncelik(g)
+
         return sirali
 
     def tum_sevkler(self, simdi: float | None = None) -> list[Sevk]:
@@ -187,5 +200,7 @@ class BoruHatti:
             "gorev": len(self.birlestirici.gorevler),
             "kesici_acilan": s.kesici_acilan,
             "kesici_cozulen": s.kesici_cozulen,
+            "mail_gonderilen": sum(1 for k in self.bildirimci.gunluk if k.basarili),
+            "mail_basarisiz": sum(1 for k in self.bildirimci.gunluk if not k.basarili),
             "asama_sn": {k: round(v, 4) for k, v in s.asama_sn.items()},
         }

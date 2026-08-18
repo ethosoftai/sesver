@@ -139,16 +139,22 @@ python -m sesver.cli demo                      # canli akis simulasyonu
 python -m sesver.cli bench --messages 20000    # tam degerlendirme
 python -m sesver.cli poison --mode gercekci    # zehirleme testi
 python -m sesver.cli sevk                      # yonlendirme matrisi
-python -m pytest -q                            # 32 test
+python -m sesver.cli altin-set                 # bagimsiz gercek veri dogrulamasi
+python -m pytest -q                            # 44 test
 ```
 
 Model egitimi icin (TRUBA):
 
 ```bash
 pip install -e ".[train]"
+python -m sesver.models.sft_veri  # DIVAN-COZ icin SFT verisi uretir (data/sft_*.jsonl)
 bash scripts/truba/kurulum.sh     # ortam kontrolu
 sbatch scripts/truba/sft.slurm    # QLoRA egitimi + degerlendirme kapisi
 ```
+
+SFT etiketleri kural tabanli `Cozumleyici`'nin ciktisi degil, sentetik
+uretecin bildigi yer gercegidir - aksi halde model gecmesi beklenen taban
+cizgisini taklit ederdi. Ayrinti: `src/sesver/models/sft_veri.py`.
 
 ---
 

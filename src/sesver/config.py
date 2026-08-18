@@ -42,6 +42,9 @@ class Esikler:
     sla_capraz_kontrol: float = 30.0
     sla_geri_yayilim: float = 60.0
 
+    # --- Bildirim: A hatti icin mail tetikleyen oncelik esigi ---
+    gorev_bildirim_esigi: float = 0.75
+
 
 ESIK = Esikler()
 

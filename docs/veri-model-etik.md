@@ -39,7 +39,33 @@ icindir.
 **Uretimde** UAVT (Ulusal Adres Veri Tabani) ve bina envanteri kullanilir.
 `data/gazetteer.py` arayuzu degismeden kaynak degistirilebilir.
 
-### 1.4 Gercek veri kullanilacaksa
+### 1.4 Bagimsiz altin set - artik var
+
+Bolum 1.1'de sozu edilen "elle etiketlenmis kucuk altin set" `sesver.eval.altin_set`
+modulunde gerceklenmistir. Kaynak: Toraman ve ark. (2023), *Tweets Under the
+Rubble* - 6 Subat 2023 depreminde 1000 Turkce tweet, elle etiketlenmis
+(yardim cagrisi var/yok), CC BY-NC-SA 4.0. Atif ve lisans: `data/kaynaklar/ATIF.md`.
+
+Depoda tutulan `data/kaynaklar/avaapm_deprem_id_etiket.tsv`, yalnizca
+tweet ID + ikili etiket + varlik ofseti icerir - **ham tweet metni yok**;
+kaynagin kendisi de bunu gizlilik/Twitter-X kullanim sartlari geregi
+dagitmiyor. Metin gereken durumda `sesver.eval.altin_set.hidrat()` X API v2
+ile ID'leri metne cevirir (``SESVER_X_BEARER_TOKEN`` gerekir); sonuc
+`data/gold/` altina onbelleklenir ve **asla commit edilmez** - bolum 1.1'deki
+"altin set depoda yayinlanmaz" kuraliyla birebir tutarli.
+
+```bash
+export SESVER_X_BEARER_TOKEN=...   # opsiyonel; yoksa yalnizca etiket dagilimi raporlanir
+python -m sesver.cli altin-set
+```
+
+Not: kaynak etiketi kurtarma+malzeme+bagis talebini birlikte kapsar; bu
+projenin `Tur.CAGRI` tanimindan (afetzedenin kendi kurtarilma cagrisi) biraz
+daha genistir. Rapordaki anma/kesinlik bu yuzden bir **yaklasik sinir**
+olarak okunmalidir, birebir ayni tanim uzerinden degil. Lisans NC (ticari
+degil) oldugundan yalnizca akademik/yarisma degerlendirmesinde kullanilir.
+
+### 1.5 Gercek veri kullanilacaksa
 
 Yarisma sonrasi gercek arsiv metniyle calisilirsa uyulacak kurallar:
 - Yalnizca **kamuya acik** paylasimlar
@@ -68,7 +94,17 @@ Mahalle adlari, yerel referanslar, yarim cumleler, Turkce klavyesiz yazim.
 | DIVAN-COZ | 1-3B | Alan cikarimi, JSON cikti | QLoRA SFT |
 | DIVAN-DURUS | ~150M encoder | Yanit zinciri durus sinifi | fine-tune |
 
-### 2.3 Egitim recetesi
+### 2.3 SFT verisi
+
+`data/sft_train.jsonl` / `data/sft_val.jsonl`, `sesver.models.sft_veri`
+tarafindan uretilir. Etiketler kural tabanli `Cozumleyici`'nin ciktisi
+DEGIL, sentetik uretecin (`data/synth.py`) bildigi gercek degerlerdir -
+aksi halde model, gecmesi beklenen taban cizgisini taklit etmeye
+egitilirdi. Sahte kampanya orneklerinde mahalle metindeki uydurma haliyle
+etiketlenir (null degil), il/ilce sozlukte cozulemedigi icin null kalir.
+Dosyalar tohumla yeniden uretilebilir oldugundan depoda tutulmaz.
+
+### 2.4 Egitim recetesi
 
 ```
 Asama 1 - SFT:      QLoRA r=32, alpha=64, lr=1e-4, bf16, 3 epoch, packing
@@ -80,12 +116,12 @@ Asama 4 - KAPI:     SES VER-Bench regresyon testi
 **Degerlendirme kapisi zorunludur.** Gerileme varsa adaptor yayina alinmaz.
 `scripts/truba/sft.slurm` egitimin hemen ardindan kapiyi kosar.
 
-### 2.4 Donanim
+### 2.5 Donanim
 
 TRUBA cuda-ui (ARF-ACC), kolyoz-cuda kuyrugu, 1x H100, 16 cekirdek.
 Veri yurt disina cikmaz.
 
-### 2.5 Mevcut durum - dogru bilgi
+### 2.6 Mevcut durum - dogru bilgi
 
 **Bu depodaki tum olculen sonuclar KURAL HATTINDAN gelmektedir.** Egitilmis
 model heniz yayinlanmamistir. Model hatti yazilmis ve kosmaya hazirdir;

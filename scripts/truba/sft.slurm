@@ -44,6 +44,12 @@ export TOKENIZERS_PARALLELISM=false
 export HF_HOME="${SCRATCH}/.cache/huggingface"
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK}"
 
+# SFT verisi commit edilmez (tohumla yeniden uretilebilir); egitimden hemen
+# once uretilir - bkz. src/sesver/models/sft_veri.py
+srun python -m sesver.models.sft_veri \
+  --egitim-cikti      "data/sft_train.jsonl" \
+  --dogrulama-cikti   "data/sft_val.jsonl"
+
 srun python -m sesver.models.train_sft \
   --taban-model "Qwen/Qwen3-1.7B" \
   --veri        "data/sft_train.jsonl" \

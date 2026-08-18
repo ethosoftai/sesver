@@ -1,7 +1,10 @@
-.PHONY: demo bench poison test lint clean
+.PHONY: demo bench poison sft-veri test lint clean
 
 demo:            ## Uctan uca canli akis simulasyonu (bagimlilik gerekmez)
 	python -m sesver.cli demo --messages 2000 --seed 42
+
+sft-veri:        ## DIVAN-COZ icin SFT egitim/dogrulama verisi uretir (data/sft_*.jsonl)
+	python -m sesver.models.sft_veri
 
 bench:           ## DIVAN-Bench: tam degerlendirme kosumu
 	python -m sesver.cli bench --messages 20000 --seed 7

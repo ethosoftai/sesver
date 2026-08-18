@@ -17,7 +17,7 @@ import time
 from collections import Counter
 
 from .data.synth import AkisUreteci
-from .eval import bench, poison
+from .eval import altin_set, bench, poison
 from .pipeline.graph import BoruHatti
 
 
@@ -37,7 +37,12 @@ def _demo(args: argparse.Namespace) -> int:
           f"{o['mesaj'] / max(sure, 1e-9):,.0f} mesaj/sn)")
     print(f"  cagri {o['cagri']} | iddia {o['iddia']} | destek {o['destek']} | "
           f"gurultu {o['gurultu']} | konumsuz {o['konumsuz']}")
-    print(f"  devre kesici: {o['kesici_acilan']} acildi, {o['kesici_cozulen']} cozuldu\n")
+    print(f"  devre kesici: {o['kesici_acilan']} acildi, {o['kesici_cozulen']} cozuldu")
+    print(
+        f"  bildirim (mail): {o['mail_gonderilen']} gonderildi, "
+        f"{o['mail_basarisiz']} atlandi/basarisiz "
+        f"(SESVER_MAIL_ENABLED=1 ile acilir)\n"
+    )
 
     print("  KUYRUK - ilk 10")
     print("  " + "-" * 92)
@@ -80,6 +85,17 @@ def _poison(args: argparse.Namespace) -> int:
         mesaj_sayisi=args.messages, zehir=args.poison, seed=args.seed, mod=args.mode
     )
     print(sonuc.yazdir())
+    return 0
+
+
+def _altin_set(args: argparse.Namespace) -> int:
+    rapor = altin_set.kosum()
+    print(rapor.yazdir())
+    if rapor.anma is None:
+        print(
+            "  ipucu: metin icin X API Bearer token gerekir.\n"
+            "  export SESVER_X_BEARER_TOKEN=... ile calistirin.\n"
+        )
     return 0
 
 
@@ -131,6 +147,10 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(fn=_poison)
 
     ortak(alt.add_parser("sevk", help="yonlendirme matrisini goster")).set_defaults(fn=_sevk)
+
+    alt.add_parser(
+        "altin-set", help="bagimsiz gercek veri (Toraman ve ark. 2023) uzerinde dogrulama"
+    ).set_defaults(fn=_altin_set)
 
     args = ayrac.parse_args(argv)
     return args.fn(args)
