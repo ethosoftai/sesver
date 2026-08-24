@@ -190,7 +190,7 @@ python -m sesver.cli poison --mode gercekci    # zehirleme testi
 python -m sesver.cli sevk                      # yönlendirme matrisi
 python -m sesver.cli sunucu                    # JSON API
 python -m sesver.cli altin-set                 # bağımsız gerçek veri doğrulaması
-python -m pytest -q                            # test paketi
+python -m pytest -q                            # 46 test
 
 python -m sesver.models.sft_veri               # DİVAN-ÇÖZ için SFT verisi
 python -m sesver.models.egit_ayikla            # eğitim + konformal kalibrasyon
@@ -231,9 +231,10 @@ Bir afet sisteminde abartılmış iddia, eksik özellikten daha tehlikelidir.
 - **Kurum entegrasyonları simülasyondur.** DSİ, TEİAŞ, BOTAŞ ve Borsa
   İstanbul bağlantıları sabit cevap dönen fonksiyonlardır; arayüz gerçek
   entegrasyona uyacak biçimde tasarlanmıştır.
-- **Veri sentetiktir.** Gerçek afet mesajları kişisel veri taşır ve bir
-  depoda yayımlanamaz. Sonuçların gerçekliği elle etiketlenmiş bir altın set
-  üzerinde doğrulanacaktır.
+- **Eğitim verisi sentetiktir.** Gerçek afet mesajları kişisel veri taşır ve
+  bir depoda yayımlanamaz. Bağımsız doğrulama için 6 Şubat 2023 depremine ait
+  elle etiketlenmiş gerçek bir altın set kullanılır (`sesver.eval.altin_set`);
+  ham metin depoda tutulmaz, yalnızca tweet kimliği ve etiket.
 - **Adres sözlüğü örnektir.** 3 il, 6 ilçe, 23 mahalle. Üretimde UAVT ve
   bina envanteri kullanılır.
 - **Arayüz yoktur.** Bilinçli tercih: değeri üreten şey ekrandaki kutular

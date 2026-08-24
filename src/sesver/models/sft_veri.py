@@ -21,12 +21,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 from ..config import CANLILIK_SOZCUKLER, KIRILGAN_SOZCUKLER
 from ..data.gazetteer import Gazetteer, varsayilan_gazetteer
 from ..data.synth import Akis, AkisUreteci, Olay
-from ..metin import icerir
+from ..metin import icerir, normalize
 
 _KOK = Path(__file__).resolve().parents[3]
 VARSAYILAN_EGITIM = _KOK / "data" / "sft_train.jsonl"
@@ -34,26 +35,65 @@ VARSAYILAN_DOGRULAMA = _KOK / "data" / "sft_val.jsonl"
 
 
 def _alanlar(olay: Olay, metin: str, sahte: bool, g: Gazetteer) -> dict:
+    """Olayin yer gercegini cikti semasina cevirir.
+
+    KRITIK KURAL: metinde GECMEYEN alan etiketlenmez, null birakilir.
+
+    Uretecin yer gercegi olayin tamamini bilir (kat, kisi sayisi, sokak,
+    bina) ama her sablon bunlarin hepsini yazmaz; ustelik yazim bozulmasi
+    (data/gurultu.py) yazilanlarin bir kismini da taninmaz hale getirir.
+    Yer gercegini oldugu gibi etiket yapmak, modele METINDE OLMAYAN BIR
+    BILGIYI UYDURMAYI ogretir - bir afet sisteminde en tehlikeli davranis
+    tam olarak budur. Bu yuzden her alan, normalize edilmis metinde gorunur
+    olup olmadigina gore filtrelenir.
+    """
+    n = normalize(metin)
+
     if sahte:
         # Uydurma yer sozlukte cozulmez: il/ilce null, mahalle metindeki haliyle.
+        aday_mahalle = f"{olay.bina}kent".title()
         il = ilce = None
-        mahalle = f"{olay.bina}kent".title()
     else:
         vurus = g.mahalle_ara(olay.yer)
         if vurus:
-            il, ilce, mahalle = vurus[0], vurus[1], vurus[2]
+            il, ilce, aday_mahalle = vurus[0], vurus[1], vurus[2]
         else:
             il = ilce = None
-            mahalle = olay.yer.title()
+            aday_mahalle = olay.yer.title()
+
+    mahalle = aday_mahalle if normalize(aday_mahalle) in n else None
+    if mahalle is None:
+        # Mahalle metinde gorunmuyorsa ondan turetilen il/ilce de gorunmez.
+        il = ilce = None
+
+    sokak = None
+    for kalip in (f"{olay.sokak} sokak", f"{olay.sokak} sok",
+                  f"{olay.sokak} cadde", f"{olay.sokak} cad"):
+        if kalip in n:
+            sokak = f"{olay.sokak}. Sokak"
+            break
 
     return {
         "il": il,
         "ilce": ilce,
         "mahalle": mahalle,
-        "sokak": f"{olay.sokak}. Sokak",
-        "bina": olay.bina.title(),
-        "kat": olay.kat,
-        "kisi_sayisi": olay.kisi,
+        "sokak": sokak,
+        "bina": olay.bina.title() if normalize(olay.bina) in n else None,
+        "kat": olay.kat if re.search(rf"{olay.kat}\s*kat", n) else None,
+        "kisi_sayisi": olay.kisi if re.search(rf"{olay.kisi}\s*kisi", n) else None,
+        "kirilgan": icerir(metin, KIRILGAN_SOZCUKLER),
+        "ses_var": icerir(metin, CANLILIK_SOZCUKLER),
+    }
+
+
+def _bos_alanlar(metin: str) -> dict:
+    """Cagri olmayan mesaj: model "burada adres yok" demeyi de ogrenmeli.
+
+    Bu negatif ornekler olmadan model her mesajdan adres uydurur.
+    """
+    return {
+        "il": None, "ilce": None, "mahalle": None, "sokak": None,
+        "bina": None, "kat": None, "kisi_sayisi": None,
         "kirilgan": icerir(metin, KIRILGAN_SOZCUKLER),
         "ses_var": icerir(metin, CANLILIK_SOZCUKLER),
     }
@@ -76,6 +116,12 @@ def uret(mesaj_sayisi: int, seed: int) -> list[dict]:
         olay = akis.olaylar[oid]
         sahte = m.id in akis.sahte_mesajlar
         ornekler.append({"mesaj": m.metin, "alanlar": _alanlar(olay, m.metin, sahte, g)})
+
+    # Negatif ornekler: cagri olmayan mesajlar, tum alanlar null.
+    negatif = [m for m in akis.mesajlar
+               if m.id not in akis.mesaj_olay and not m.yanit_mi]
+    for m in negatif[: max(1, len(ornekler) // 3)]:
+        ornekler.append({"mesaj": m.metin, "alanlar": _bos_alanlar(m.metin)})
     return ornekler
 
 
