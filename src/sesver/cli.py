@@ -17,7 +17,7 @@ import time
 from collections import Counter
 
 from .data.synth import AkisUreteci
-from .eval import altin_set, bench, poison
+from .eval import altin_set, bench, deney, poison
 from .pipeline.graph import BoruHatti
 
 
@@ -100,6 +100,38 @@ def _altin_set(args: argparse.Namespace) -> int:
     return 0
 
 
+def _deney(args: argparse.Namespace) -> int:
+    """Coklu tohum, bilesen ablasyonu ve esik duyarliligi.
+
+    Tek kosumluk nokta tahmin bir muhendislik iddiasini tasiyamaz; bu komut
+    raporlanabilir olcumleri uretir.
+    """
+    kucuk = max(args.messages // 2, 4000)
+
+    print()
+    print("  COKLU TOHUM  (5 tohum, ortalama +/- %95 GA)")
+    for ad, oz in deney.coklu_tohum(mesaj_sayisi=args.messages).items():
+        print(f"    {ad:16s} {oz.yaz()}")
+
+    print()
+    print("  BILESEN ABLASYONU  (3 tohum)")
+    baslik = (f"    {'yapilandirma':24s} {'saflik':>9s} {'indirgeme':>10s} "
+              f"{'dogrulanan':>11s} {'sahte medyan':>13s}")
+    print(baslik)
+    for ad, o in deney.ablasyon(mesaj_sayisi=kucuk).items():
+        print(f"    {ad:24s} {o['saflik'].ortalama:>9.4f} "
+              f"{o['oran'].ortalama:>9.2f}x {o['dogrulanan'].ortalama:>11.1f} "
+              f"{o['sahte_medyan'].ortalama:>13.4f}")
+
+    print()
+    print("  ESIK DUYARLILIGI  (metin benzerligi)")
+    for e in deney.esik_duyarliligi(mesaj_sayisi=kucuk):
+        print(f"    esik {e['esik']:.2f}  saflik {e['saflik']:.4f}  "
+              f"indirgeme {e['oran']:.2f}x  gorev {e['gorev']}")
+    print()
+    return 0
+
+
 def _sevk(args: argparse.Namespace) -> int:
     akis = AkisUreteci(seed=args.seed).uret(args.messages)
     hat = BoruHatti()
@@ -150,6 +182,9 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(fn=_poison)
 
     ortak(alt.add_parser("sevk", help="yonlendirme matrisini goster")).set_defaults(fn=_sevk)
+    ortak(alt.add_parser(
+        "deney", help="coklu tohum, bilesen ablasyonu ve esik duyarliligi"
+    )).set_defaults(fn=_deney)
 
     alt.add_parser(
         "altin-set", help="bagimsiz gercek veri (Toraman ve ark. 2023) uzerinde dogrulama"
