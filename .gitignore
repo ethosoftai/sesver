@@ -9,8 +9,13 @@ build/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-# model ve veri agirliklari repoda tutulmaz
-checkpoints/
+# Buyuk model agirliklari repoda tutulmaz.
+# DIVAN-AYIKLA istisnadir: 149 KB'lik tek JSON dosyasi ve olculmus
+# raporu depoda durur ki sonuclar klonlandigi anda dogrulanabilsin.
+checkpoints/*
+!checkpoints/divan-ayikla.json
+!checkpoints/divan-ayikla-konformal.json
+!checkpoints/divan-ayikla-rapor.json
 runs/
 *.safetensors
 *.gguf
@@ -18,9 +23,11 @@ runs/
 data/raw/
 data/gold/*.jsonl
 !data/gold/.gitkeep
-# sft_veri.py'den uretilir, tohumla yeniden uretilebilir, commit edilmez
-data/sft_train.jsonl
-data/sft_val.jsonl
+# SFT verisi tohumla yeniden uretilebilir, commit edilmez
+data/sft_*.jsonl
 logs/
 *.out
 *.err
+
+# Bu depoya ait olmayan, baska bir calismadan gelen dosyalar
+scripts/truba/reddit_top10.*

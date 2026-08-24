@@ -1,155 +1,208 @@
 # SES VER
 
-**Afet aninda sosyal medyanin gurultusunu, dakikalar icinde dogrulanmis bir kurtarma gorev listesine ceviren ajan sistemi.**
+**Afet anında sosyal medyanın gürültüsünü, dakikalar içinde doğrulanmış bir kurtarma görev listesine çeviren ajan sistemi.**
 
-TEKNOFEST 2026 · NSosyal Inovasyon Yarismasi · Sosyal Yapay Zeka dikeyi
+TEKNOFEST 2026 · NSosyal İnovasyon Yarışması · Sosyal Yapay Zekâ dikeyi
 
 ```bash
 git clone https://github.com/ethosoftai/sesver
 cd sesver
-python -m sesver.cli demo        # bagimlilik gerekmez, hemen kosar
+python -m sesver.cli demo              # bağımlılık gerekmez, hemen koşar
+python -m sesver.models.egit_ayikla    # modeli CPU'da ~15 sn'de eğitir
 ```
+
+Çekirdek boru hattı, değerlendirme koşumu **ve model eğitimi** harici
+bağımlılık olmadan çalışır: numpy yok, scikit-learn yok, PyTorch yok.
+Afette ilk kesilen şey ağ bağlantısı, ikincisi kurulum yapabilme imkânıdır.
 
 ---
 
 ## Problem
 
-Buyuk bir afetin ilk 72 saatinde sosyal medya, en yuksek hacimli ve en hizli
-yer gercegi kaynagi haline gelir - ve operasyonel olarak kullanilamaz:
-
-| Sorun | Sonuc |
+| Sorun | Sonuç |
 |---|---|
-| Milyonlarca mesaj icinde gercek cagri kayboluyor | Ekip nereye gidecegini bilmiyor |
-| Adresler serbest metin: *"Armutlu, 5. sokak, marketin arkasi"* | Kayit haritaya dusmuyor |
-| Bir ailenin cagrisi 50.000 kez paylasiliyor | Ayni bina defalarca gorev aciyor |
-| **Kurtarilmis insanlarin cagrisi gunlerce dolasiyor** | **Ekipler bosaltilmis binalara gidiyor** |
-| Sahte ihbar ve dezenformasyon | Kit kurtarma kapasitesi bosa harcaniyor |
-| AFAD'a yapilandirilmis devir yok | 2023'te bu isi gonulluler elle yapti |
+| Milyonlarca mesaj içinde gerçek çağrı kayboluyor | Ekip nereye gideceğini bilmiyor |
+| Adresler serbest metin: *"Armutlu, 5. sokak, marketin arkası"* | Kayıt haritaya düşmüyor |
+| Bir ailenin çağrısı 50.000 kez paylaşılıyor | Aynı bina defalarca görev açıyor |
+| **Kurtarılmış insanların çağrısı günlerce dolaşıyor** | **Ekipler boşaltılmış binalara gidiyor** |
+| Sahte ihbar ve dezenformasyon | Kıt kurtarma kapasitesi boşa harcanıyor |
 
-## Cozum
+## Çözüm: iki hat
 
-Iki ayri hat, cunku ekonomileri zit:
+**A HATTI — yardım çağrısı.** Yüz binlerce kayıt, her biri tek bir binayı
+ilgilendirir. `ayıkla → çöz → yer bul → birleştir → doğrula → önceliklendir
+→ aktar → kapat`
 
-**A HATTI - yardim cagrisi.** Yuz binlerce kayit, her biri tek bir binayi
-ilgilendirir. Sekiz asama: `ayikla -> coz -> yer bul -> birlestir -> dogrula
--> onceliklendir -> aktar -> kapat`
+**B HATTI — sistemik iddia.** Onlarca kayıt, her biri milyonlarca kişiyi
+ilgilendirir. *"Baraj patladı"* yanlışsa kitlesel paniğe, doğruysa geç
+kalınmış bir tahliyeye yol açar.
 
-**B HATTI - sistemik iddia.** Onlarca kayit, her biri milyonlarca kisiyi
-ilgilendirir. *"Baraj patladi"* bir yardim cagrisi degildir; yanlissa
-kitlesel panige, dogruysa gec kalinmis bir tahliyeye yol acar.
+Ekonomileri zıt olduğu için kod yolları da ayrıdır.
 
 ---
 
-## Uc tasarim karari
+## Üç tasarım kararı
 
-### 1. Kayit silinmez, siralanir
+**1. Kayıt silinmez, sıralanır.** Gerçek bir çağrıyı elemek bir aileyi
+kaybettirir; sahte bir çağrıyı geçirmek kıt kapasiteyi harcar ve o kapasite
+başka yerde bir hayata mal olur. İkisi de ölümcül olduğu için ikili
+doğru/yanlış sınıflandırması yanlış tasarımdır.
 
-Kurtarma baglaminda maliyet asimetriktir:
+> Sistem neyin doğru olduğunu iddia etmiyor. **Yanlış olma maliyetini yönetiyor.**
 
-- Gercek cagriyi elemek → **bir aile olur**
-- Sahte cagriyi gecirmek → kit kapasite bosa gider, o kapasite baska yerde birini oldurur
+**2. Öncelik güvene eşit değildir.**
+`öncelik = şiddet × zaman_baskısı × √güven × eylem_çarpanı`
+Karekök, güveni bir *sıralama çarpanına* dönüştürür; bir *eleme kapısına*
+değil. Tek kaynaklı ama "üç çocuk var, sesler geliyor" diyen çağrı, iki
+kaynaklı ama işaretsiz çağrının üstünde kalır.
 
-Ikisi de olumcludur. Bu yuzden ikili "dogru/yanlis" siniflandirmasi yanlis
-tasarimdir. Her kayit bir guven skoru alir ve oncelik kuyruguna girer; hicbir
-sey yok edilmez, yalnizca asagi iner.
-
-> Sistem neyin dogru oldugunu iddia etmiyor. **Yanlis olma maliyetini yonetiyor.**
-
-### 2. Oncelik guvene esit degildir
-
-```
-oncelik = siddet × zaman_baskisi × √guven
-```
-
-Karekok bilincli bir secimdir: guven bir **siralama carpani**, bir **eleme
-kapisi** degil. Tek kaynakli ama *"3 cocuk var, sesler geliyor"* diyen bir
-cagri, iki kaynakli ama isaretsiz bir cagrinin ustunde kalir.
-
-### 3. Sistem kahin degil, yonlendiricidir
-
-*"Baraj patladi"* iddiasinin cevabi **su anda bir veritabaninda duruyor.**
-DSI'nin o barajda telemetrisi var. Sorun bilgi eksikligi degil, **yonlendirme
-gecikmesidir**: soylenti dort dakikada iki yuz bin kisiye ulasir, cevap uc
-saat sonra basin aciklamasiyla gelir.
-
-B hatti o gecikmeyi kapatir ve duzeltmeyi **soylentinin yayildigi grafigin
-uzerinden** geri gonderir - yani tam olarak onu gormus kisilere.
+**3. Metin benzerliği adres çelişkisinin yerine geçmez.** Çağrıların çoğu
+aynı kalıptan çıkar; iki farklı binanın metinleri %80 benzer olabilir.
+Yalnızca metne bakan bir kümeleyici komşu iki enkazı tek göreve indirger ve
+ikinci binaya kimse gitmez.
 
 ---
 
-## Olculen sonuclar
+## Yapay zekâ hattı
 
-Sentetik akis, 20.000 mesaj, tek cekirdek, **model olmadan** (saf kural hatti).
-Rakamlarin tamami `python -m sesver.cli bench` ile yeniden uretilebilir.
+### DİVAN-AYIKLA — eğitilmiş triyaj sınıflandırıcısı
 
-### Triyaj - yardim cagrisini kacirmamak
-| Metrik | Deger |
-|---|---|
-| **Anma** | **1.0000** |
-| **Kacan gercek cagri** | **0** |
-| Kesinlik | 0.6894 |
-| F1 | 0.8162 |
+Karakter n-gram karma özellikleri üzerinde **ortalamalı perceptron**, saf
+Python. 22.740 örnek, 8 epoch, **CPU'da 15 saniye**, 4.122 sıfır olmayan
+ağırlık, 149 KB'lık tek JSON dosyası.
 
-Kesinligin dusuk olmasi tasarim geregidir: triyaj bilerek cagri lehine
-egiktir. Fazla gelen kayitlar gorev kuyruguna girmez, adres zenginlestirme
-havuzuna duser.
+Neden büyük dil modeli değil: triyaj akıştaki *her* mesaja uygulanır, karar
+bütçesi milisaniyelerdir. Doğru kaskad ucuz sınıflandırıcıyı her mesaja,
+pahalı modeli yalnızca gri bölgeye uygular.
 
-### Tekillestirme - hacim problemi
-| Metrik | Deger |
-|---|---|
-| Cagri → gorev | 9.939 → 985 (**10,1x**) |
-| **Kume safligi** | **0.9898** |
-| Olay kapsamasi | 0.9352 |
-| Konumsuz havuz | 3.598 |
+### Dürüst değerlendirme: şablon-ayrık test
 
-Kume safligi kritik: iki farkli enkaz tek goreve indirgenirse ikinci binaya
-kimse gitmez. Bunu engelleyen kural, metin benzerliginin adres celiskisinin
-yerine gecmemesidir.
+Tüm şablonlar hem eğitimde hem testte kullanılırsa model şablon parmak izini
+ezberler ve **F1 = 1,0000** üretir — gerçek dünyada hiçbir şey öngörmeyen bir
+sayı. Bu depoda ilk ölçüm tam olarak böyle çıktı ve atıldı.
 
-### Zehirleme testi - saldirgan altinda
-Saldirgan modeli **gercekci**: sozlukteki gercek mahalle ve sokak adlariyla,
-yeni acilmis hesaplardan, yuksek paylasim baskisiyla 200 sahte ihbar.
+Bunun yerine şablon havuzu ikiye bölünür: model `a` yarısıyla eğitilir,
+**`b` yarısıyla (daha önce hiç görmediği ifade biçimleriyle)** test edilir.
+Ayrıca tüm metinlere gerçekçi yazım bozulması uygulanır (Türkçe karakter
+kaybı, harf düşmesi, komşu tuş, uzatma, mesajın yarıda kesilmesi).
 
-| Metrik | Deger |
-|---|---|
-| Enjekte edilen | 200 |
-| Kuyruga giren | 200 |
-| **Ilk 10'a sizan** | **0** |
-| **Ilk 100'e sizan** | **0** |
-| Medyan yuzdelik | 0.669 |
-| **Kaybolan gercek gorev** | **0** |
+| Metrik | Kural hattı | Model | Birleşik |
+|---|---|---|---|
+| Doğruluk | 0,6714 | **0,7675** | 0,6515 |
+| Makro F1 | 0,6832 | **0,7146** | 0,6404 |
+| F1 (çağrı) | 0,6847 | **0,7690** | 0,6745 |
+| F1 (gürültü) | 0,6223 | **0,7750** | 0,6073 |
+| F1 (iddia) | **0,5475** | 0,5008 | 0,5095 |
+| **Kaçan gerçek çağrı** | **0** | **22** | **0** |
 
-Ikinci satir olmadan birincisi anlamsizdir: her seyi bastiran bir sistem de
-"basarili" gorunurdu. Basari, sahteyi asagi iterken gercege dokunmamaktir.
+### Bulgu: model tek başına triyaj kararını almamalı
 
-### Tazelik ve hiz
-| Metrik | Deger |
-|---|---|
-| Bayat kayit kapatma orani | 1.0000 |
-| Verim (tek cekirdek, saf Python) | 1.121 mesaj/sn |
+Model genel doğrulukta kural hattını 9,6 puan yeniyor ve gürültü ayrımında
+açık ara üstün. **Ama 22 gerçek yardım çağrısı kaçırıyor; kural hattı sıfır
+kaçırıyor.** Afet bağlamında bu iki hata eşit ağırlıkta değildir.
+
+Bu yüzden `BirlesikTriyaj` asimetriktir: **ÇAĞRI için kural VEYA model**
+(anma korunur), diğer sınıflar için model. Birleşik hat kaçan çağrıyı sıfıra
+indirir — ama genel doğrulukta kural hattının altında kalır. Dolayısıyla
+üretimdeki triyaj kararı **kural hattında kalmaktadır**; model, doğrulama
+katmanına ikinci görüş sinyali olarak beslenir; orada bir hata ölümcül değildir.
+
+Bu, ölçümden çıkan bir mühendislik sonucudur, bir pazarlama cümlesi değil.
+
+### Konformal kalibrasyon — garantili hata bütçesi
+
+Softmax çıktıları kalibre değildir; "%92 eminim" hiçbir şey garanti etmez.
+Bölünmüş konformal tahmin, modelin iç skorlarına hiç güvenmez: ayrı bir
+kalibrasyon kümesinde gerçek hata dağılımını ölçer ve dağılımdan bağımsız
+bir garanti verir — `P(gerçek sınıf ∈ C(x)) ≥ 1 − α`.
+
+Tekil olmayan her tahmin kümesi insana devredilir. Bu, "kayıt silinmez,
+sıralanır" ilkesinin model düzeyindeki karşılığıdır.
+
+| α | Kapsama | Çekimserlik | Otomatik kararda doğruluk |
+|---|---|---|---|
+| 0,01 | 0,9910 | 0,0090 | 1,0000 |
+| 0,02 | 0,9828 | 0,0172 | 1,0000 |
+| 0,05 | 0,9502 | 0,0498 | 1,0000 |
+
+Garanti sağlanıyor ve eğri teoriyle birebir uyumlu.
+
+### Bulgu: çekimserlik oranı bir dağılım kayması alarmıdır
+
+Konformal garanti, kalibrasyon ve üretim dağılımlarının değişmediği
+varsayımına dayanır. Şablon-ayrık testte bu varsayım **kasıtlı olarak**
+ihlal edilir ve kapsama 0,95'ten **0,3337**'ye düşer.
+
+Kritik olan şu: sistem bunu sessizce yapmaz. Çekimserlik %5'ten **%66,6**'ya
+fırlar. Yani model, görmediği bir dağılımla karşılaştığında yanlış karar
+vermek yerine devrediyor ve bu devretme oranı ölçülebilir bir alarm sinyali
+üretiyor. Sahada bu, "akışın karakteri değişti, modeli yeniden eğit"
+uyarısına karşılık gelir.
 
 ---
 
-## Kurulum ve kullanim
+## Ölçülen sonuçlar — boru hattı
 
-Cekirdek **sifir bagimlilikla** calisir - stdlib disinda hicbir sey gerekmez.
+20.000 mesajlık sentetik akış. **Gürültü ablasyonu**, yazım bozulmasının
+maliyetini doğrudan ölçer:
+
+| Metrik | Temiz şablon | Gerçekçi bozulma | Kabul eşiği |
+|---|---|---|---|
+| Triyaj anması | 1,0000 | **1,0000** | ≥ 0,99 |
+| **Kaçan gerçek çağrı** | **0** | **0** | 0 |
+| Tekilleştirme | 10,5× | 6,4× | — |
+| Küme saflığı | 0,9867 | 0,8383 | ≥ 0,80 |
+| Olay kapsaması | 0,9411 | 0,9402 | ≥ 0,90 |
+| Bayat kayıt kapatma | 1,0000 | 0,6850 | — |
+| Verim (tek çekirdek) | ~1.700 msj/sn | ~1.250 msj/sn | — |
+
+**Okunuşu:** güvenlik özelliği — sıfır kaçan çağrı — gürültü altında
+bozulmadan duruyor. Bozulan şey adres çözümlemesine dayanan metrikler: küme
+saflığı 0,99'dan 0,84'e, bayat kapatma 1,00'dan 0,69'a iniyor. Bu düşüş
+eğitilmiş çıkarım modelinin (DİVAN-ÇÖZ) kapatması gereken açığı sayısal
+olarak tanımlar.
+
+### Zehirleme testi
+
+Saldırgan modeli bilinçli olarak zor: uydurma adres yerine **sözlükteki
+gerçek mahalle ve sokak adları**, yeni açılmış hesaplar, yüksek paylaşım
+baskısı.
+
+| | |
+|---|---|
+| Enjekte edilen sahte kayıt | 200 |
+| Kuyruğa giren | 200 |
+| **İlk 100'e sızan** | **0** |
+| **Kaybolan gerçek görev** | **0** |
+
+İkinci satır olmadan birincisi anlamsızdır: her şeyi bastıran bir sistem de
+"başarılı" görünürdü.
+
+---
+
+## Kullanım
 
 ```bash
-python -m sesver.cli demo                      # canli akis simulasyonu
-python -m sesver.cli bench --messages 20000    # tam degerlendirme
+python -m sesver.cli demo                      # canlı akış simülasyonu
+python -m sesver.cli bench --messages 20000    # tam değerlendirme
+python -m sesver.cli bench --gurultu 0         # temiz rejim (ablasyon)
 python -m sesver.cli poison --mode gercekci    # zehirleme testi
-python -m sesver.cli sevk                      # yonlendirme matrisi
-python -m sesver.cli altin-set                 # bagimsiz gercek veri dogrulamasi
-python -m pytest -q                            # 44 test
+python -m sesver.cli sevk                      # yönlendirme matrisi
+python -m sesver.cli sunucu                    # JSON API
+python -m sesver.cli altin-set                 # bağımsız gerçek veri doğrulaması
+python -m pytest -q                            # test paketi
+
+python -m sesver.models.sft_veri               # DİVAN-ÇÖZ için SFT verisi
+python -m sesver.models.egit_ayikla            # eğitim + konformal kalibrasyon
 ```
 
-Model egitimi icin (TRUBA):
+TRUBA üzerinde büyük model eğitimi:
 
 ```bash
 pip install -e ".[train]"
-python -m sesver.models.sft_veri  # DIVAN-COZ icin SFT verisi uretir (data/sft_*.jsonl)
-bash scripts/truba/kurulum.sh     # ortam kontrolu
-sbatch scripts/truba/sft.slurm    # QLoRA egitimi + degerlendirme kapisi
+python -m sesver.models.sft_veri  # DİVAN-ÇÖZ için SFT verisi üretir
+bash scripts/truba/kurulum.sh     # ortam kontrolü
+sbatch scripts/truba/sft.slurm    # QLoRA eğitimi + değerlendirme kapısı
 ```
 
 SFT etiketleri kural tabanli `Cozumleyici`'nin ciktisi degil, sentetik
@@ -158,70 +211,33 @@ cizgisini taklit ederdi. Ayrinti: `src/sesver/models/sft_veri.py`.
 
 ---
 
-## Mimari
+## Gizlilik — pazarlık dışı iki kural
 
-```
-                    NSosyal olay veriyolu
-                            |
-                       [ TRIYAJ ]
-                            |
-        +-------------------+-------------------+
-        |                                       |
-   A HATTI (cagri)                        B HATTI (iddia)
-        |                                       |
-   [ COZUMLE ]  adres cikarimi            [ ETKI SKORU ]
-   [ YER BUL ]  UAVT sozlugu              [ DEVRE KESICI ]  <= 15 dk, sureli
-   [ BIRLESTIR] tekillestirme             [ CAPRAZ KONTROL ] DSI/TEIAS/Borsa
-   [ DOGRULA  ] ucgenleme + durus         [ YETKILI ]        15 dk sayac
-   [ ONCELIK  ] siddet x zaman x guven    [ GERI YAYILIM ]   soylentinin yolu
-   [ KAPAT    ] bayatlama                        |
-        |                                       |
-        +-------------------+-------------------+
-                            |
-                     [ YONLENDIRME ]
-                            |
-   AFAD · saha ekibi · valilik · teknik kurum · saglik
-   gonullu · vatandas · kamu · kolluk
-```
+`tests/test_gizlilik.py` tarafından sınanır; ihlal eden değişiklik testi kırar.
 
-Ayrintili aciklama: [`docs/mimari.md`](docs/mimari.md) ·
-Entegrasyon plani: [`docs/entegrasyon.md`](docs/entegrasyon.md)
+1. **Kolluğa doğrulanmamış bireysel ihbar gitmez.**
+2. **Kamuya kişisel veri gitmez.** Halka açık harita mahalle düzeyinde
+   toplulaştırılır.
 
 ---
 
-## Gizlilik - pazarlik disi iki kural
+## Dürüstlük notları
 
-Bu iki kural `tests/test_gizlilik.py` tarafindan sinanir; ihlal eden bir
-degisiklik testi kirar.
+Bir afet sisteminde abartılmış iddia, eksik özellikten daha tehlikelidir.
 
-**1. Kolluga dogrulanmamis bireysel ihbar gitmez.** Yalnizca dogrulanmis
-olaylar ve toplulastirilmis soylenti durumu iletilir.
-
-**2. Kamuya kisisel veri gitmez.** Halka acik harita mahalle duzeyinde
-toplulastirilir; isim, telefon ve saglik durumu yalnizca gorevi ustlenen
-ekibe, yalnizca gorev suresince acilir.
-
-Ayrintili degerlendirme: [`docs/veri-model-etik.md`](docs/veri-model-etik.md)
-
----
-
-## Durustluk notlari
-
-Bir afet sisteminde abartilmis iddia, eksik ozellikten daha tehlikelidir.
-Bu deponun **su anda yapmadigi** seyler:
-
-- **Kurum entegrasyonlari simulasyondur.** DSI, TEIAS, BOTAS ve Borsa
-  Istanbul baglantilari `claims/registry.py` icinde sabit cevap donen
-  fonksiyonlardir. Arayuz gercek entegrasyona uyacak sekilde tasarlanmistir;
-  gerceklenmesi protokol ve yetkilendirme gerektirir.
-- **Egitilmis model heniz yayinlanmadi.** Olculen tum sonuclar KURAL HATTINDAN
-  gelir. Model hatti (`models/train_sft.py`) yazilmistir ve TRUBA'da kosmaya
-  hazirdir; egitim sonuclari eklendiginde bu bolum guncellenecektir.
-- **Veri sentetiktir.** Gercek afet mesajlari kisisel veri tasir; bir depoda
-  yayinlanamaz. Sonuclarin gercekligi elle etiketlenmis kucuk bir altin set
-  uzerinde dogrulanacaktir.
-- **Adres sozlugu ornektir.** 3 il, 6 ilce, 23 mahalle. Uretimde UAVT ve bina
-  envanteri kullanilir.
+- **TRUBA'da büyük model eğitimi yapılmadı.** SLURM betikleri ve 15.117
+  örneklik SFT veri kümesi hazır; küme erişimi bu çalışma sırasında
+  sağlanamadı. Eğitilen ve raporlanan model, CPU'da koşan DİVAN-AYIKLA'dır.
+- **Kurum entegrasyonları simülasyondur.** DSİ, TEİAŞ, BOTAŞ ve Borsa
+  İstanbul bağlantıları sabit cevap dönen fonksiyonlardır; arayüz gerçek
+  entegrasyona uyacak biçimde tasarlanmıştır.
+- **Veri sentetiktir.** Gerçek afet mesajları kişisel veri taşır ve bir
+  depoda yayımlanamaz. Sonuçların gerçekliği elle etiketlenmiş bir altın set
+  üzerinde doğrulanacaktır.
+- **Adres sözlüğü örnektir.** 3 il, 6 ilçe, 23 mahalle. Üretimde UAVT ve
+  bina envanteri kullanılır.
+- **Arayüz yoktur.** Bilinçli tercih: değeri üreten şey ekrandaki kutular
+  değil, arkasındaki hattır. JSON API herhangi bir istemciye açıktır.
 
 ---
 

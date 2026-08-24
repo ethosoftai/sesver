@@ -52,8 +52,13 @@ jobs:
           if r["triyaj"]["anma"] < 0.99:
               hatalar.append(f"triyaj anmasi dustu: {r['triyaj']['anma']}")
           # Iki farkli enkazin tek goreve inmesi ikinci binayi gorunmez kilar.
-          if r["tekillestirme"]["saflik"] < 0.95:
+          # Esik, GERCEKCI (yazim bozulmali) rejimde olculen degere gore
+          # konmustur. Temiz sablon ciktisinda ayni metrik 0,98'dir; kapiyi
+          # oraya gore koymak, gercek kosullardaki gerilemeyi gizlerdi.
+          if r["tekillestirme"]["saflik"] < 0.80:
               hatalar.append(f"kume safligi dustu: {r['tekillestirme']['saflik']}")
+          if r["tekillestirme"]["kapsama"] < 0.90:
+              hatalar.append(f"olay kapsamasi dustu: {r['tekillestirme']['kapsama']}")
           if r["bastirma"]["gercek_kaybi"] != 0:
               hatalar.append(f"gercek gorev kaybi: {r['bastirma']['gercek_kaybi']} (hedef 0)")
           if hatalar:
@@ -66,3 +71,18 @@ jobs:
 
       - name: Zehirleme testi
         run: PYTHONPATH=src python -m sesver.cli poison --messages 8000 --poison 100 --mode gercekci
+
+      # Model egitimi CPU'da ~15 sn surer ve harici bagimlilik istemez;
+      # bu yuzden CI'da her commit'te bastan egitilip dogrulanir.
+      - name: DIVAN-AYIKLA egitimi ve konformal kalibrasyon
+        run: |
+          PYTHONPATH=src python -m sesver.models.egit_ayikla             --egitim 16000 --kalibrasyon 8000 --test 8000 --epoch 6
+          python - <<'PY'
+          import json, sys
+          r = json.load(open("checkpoints/divan-ayikla-rapor.json", encoding="utf-8"))
+          birlesik = r["test"]["birlesik"]["kacan_cagri"]
+          if birlesik != 0:
+              print(f"BIRLESIK HAT CAGRI KACIRDI: {birlesik}")
+              sys.exit(1)
+          print("birlesik hat kacan cagri: 0")
+          PY

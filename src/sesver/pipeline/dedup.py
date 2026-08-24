@@ -168,8 +168,17 @@ class Birlestirici:
 
         # Adresi zayif olan taraflarda (bina yok) metin benzerligi hala
         # gereklidir; aksi halde ayni mahallenin tum kaba cagrilari birlesir.
-        zayif_adres = a.bina is None and b.bina is None
-        if not anahtar_ayni and zayif_adres and metin < ESIK.metin_benzerlik:
+        # Adres anahtarlari birebir tutmuyorsa metin benzerligi ZORUNLUDUR.
+        #
+        # Onceki surumde bu kosul yalnizca iki taraf da bina duzeyinde
+        # degilse araniyordu. Yazim bozulmasi eklenince su hata ortaya cikti:
+        # bir kayitta bina adi bozulup cikarilamayinca alan None kalir,
+        # ``_uyumlu`` "bir taraf bos" diye gecirir ve KOMSU BIR BINAYLA
+        # birlesir. Olculen kume safligi 0,99'dan 0,78'e dustu.
+        #
+        # Eksik alan, celismeyen alan degildir: yalnizca bilinmeyen alandir.
+        # Bu yuzden anahtar tam tutmadigi her durumda metin de benzemelidir.
+        if not anahtar_ayni and metin < ESIK.metin_benzerlik:
             return None
 
         yakinlik = 1.0 if mesafe is None else max(0.0, 1.0 - mesafe / ESIK.mekan_yaricap_m)

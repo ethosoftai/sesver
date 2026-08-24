@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 
 from ..schemas import Hesap, Mesaj
 from .gazetteer import varsayilan_gazetteer
+from .gurultu import boz
 
 BINA_ADLARI = (
     "yilmaz", "gunes", "cinar", "ege", "sedef", "umut", "meltem", "safak",
@@ -73,6 +74,23 @@ IDDIA_KALIPLARI = (
     ("elektrikler kesildi bolgede sebeke coktu", True),
 )
 
+# Sinirda duran ornekler. Gercek akisin en zor kismi burasidir ve
+# bunlar olmadan olculen basari yaniltici derecede yuksek cikar.
+#   - baskasinin cagrisini aktaran mesaj: cagri gibi gorunur, ihbar degildir
+#   - adressiz endise: ihbardir ama eyleme donusturulemez
+#   - dogrulama sorusu: gurultudur ama cagri sozcukleri tasir
+SINIRDA = (
+    ("bir arkadasimin ailesi enkaz altinda diye paylasiyorlar lutfen duyurun", "gurultu"),
+    ("bu adresi paylasiyorum kendim gormedim dogrulayan var mi", "gurultu"),
+    ("su adrese ekip gitsin diyorlar teyit eden var mi acaba", "gurultu"),
+    ("listede gordugum adresleri paylasiyorum sorumluluk kabul etmiyorum", "gurultu"),
+    ("annemden haber alamiyoruz cok endiseliyiz nerede bilmiyoruz", "cagri"),
+    ("ablam o bolgede oturuyordu telefonu kapali ulasamiyoruz", "cagri"),
+    ("kardesim sabahtan beri aranmiyor lutfen bir bakan olsun", "cagri"),
+    ("elimizde malzeme var ama nereye goturecegimizi bilmiyoruz", "destek"),
+    ("ekip olarak yola ciktik koordinat bekliyoruz", "destek"),
+)
+
 TEYIT_YANIT = ("ben de gordum komsusuyum", "ayni binada akrabam var teyit ettim", "oradayim dogru")
 YALAN_YANIT = ("boyle bir adres yok arkadaslar", "bu eski paylasim", "asilsiz bilgi yaymayin")
 COZULDU_YANIT = ("kurtarildilar cok sukur", "cikarildi hepsi saglikli", "ulasildi iyi haber")
@@ -100,6 +118,7 @@ class Akis:
     mesaj_olay: dict[str, str]        # mesaj id -> olay id
     sahte_mesajlar: set[str]
     iddia_mesajlari: dict[str, bool]  # mesaj id -> iddia dogru mu
+    mesaj_sinifi: dict[str, str]      # mesaj id -> cagri/iddia/destek/gurultu
 
     @property
     def gercek_olay_sayisi(self) -> int:
@@ -119,12 +138,42 @@ class AkisUreteci:
         seed: int = 42,
         sahte_orani: float = 0.06,
         kopya_lambda: float = 6.0,
+        gurultu_siddeti: float = 1.0,
+        sinirda_orani: float = 0.05,
+        sablon_yarisi: str | None = None,
     ) -> None:
         self.rnd = random.Random(seed)
         self.sahte_orani = sahte_orani
         self.kopya_lambda = kopya_lambda
+        # Yazim bozulmasi ve sinirda ornekler: degerlendirmenin yapay olarak
+        # kolaylasmasini engeller. 0 verilirse temiz sablon ciktisi uretilir.
+        self.gurultu_siddeti = gurultu_siddeti
+        self.sinirda_orani = sinirda_orani
+
+        # SABLON AYRIKLIGI - modelin genellemesini olcmenin tek durust yolu.
+        #
+        # Tum sablonlar hem egitimde hem testte kullanilirsa model sablon
+        # parmak izini ezberler ve mukemmele yakin skor uretir; bu skor
+        # gercek dunyada hicbir seyi ongormez. "a" ve "b" yarilari ayrik
+        # sablon kumeleri dondurur: "a" ile egitilen model, "b" testinde
+        # DAHA ONCE HIC GORMEDIGI ifade bicimleriyle karsilasir.
+        self.sablon_yarisi = sablon_yarisi
         self.g = varsayilan_gazetteer()
         self._mahalleler = self.g.mahalleler
+
+        self._cagri_kalip = self._dilim(CAGRI_KALIPLARI)
+        self._gurultu_kalip = self._dilim(GURULTU_KALIPLARI)
+        self._destek_kalip = self._dilim(DESTEK_KALIPLARI)
+        self._iddia_kalip = self._dilim(IDDIA_KALIPLARI)
+        self._sinirda = self._dilim(SINIRDA)
+
+    def _dilim(self, havuz):
+        """Sablon havuzunun istenen yarisi. None ise tamami."""
+        if self.sablon_yarisi is None:
+            return list(havuz)
+        kalan = 0 if self.sablon_yarisi == "a" else 1
+        secim = [x for i, x in enumerate(havuz) if i % 2 == kalan]
+        return secim or list(havuz)
 
     def uret(self, mesaj_sayisi: int = 2000, saat: float = 12.0) -> Akis:
         mesajlar: list[Mesaj] = []
@@ -132,6 +181,7 @@ class AkisUreteci:
         mesaj_olay: dict[str, str] = {}
         sahte: set[str] = set()
         iddialar: dict[str, bool] = {}
+        sinif: dict[str, str] = {}   # triyaj egitimi icin yer gercegi
 
         sure = saat * 3600.0
         t0 = 1_000_000.0
@@ -166,6 +216,7 @@ class AkisUreteci:
                     )
                     mesajlar.append(m)
                     mesaj_olay[mid] = olay.id
+                    sinif[mid] = "cagri"
                     olay.mesaj_idleri.append(mid)
                     if not olay.gercek:
                         sahte.add(mid)
@@ -175,7 +226,7 @@ class AkisUreteci:
 
             # --- %4 sistemik iddia ---
             elif zar < 0.12:
-                metin, dogru = self.rnd.choice(IDDIA_KALIPLARI)
+                metin, dogru = self.rnd.choice(self._iddia_kalip)
                 mid = yeni_id()
                 mesajlar.append(
                     Mesaj(
@@ -187,11 +238,27 @@ class AkisUreteci:
                     )
                 )
                 iddialar[mid] = dogru
+                sinif[mid] = "iddia"
+
+            # --- sinirda duran ornekler ---
+            elif zar < 0.12 + self.sinirda_orani:
+                metin, gercek_sinif = self.rnd.choice(self._sinirda)
+                mid = yeni_id()
+                mesajlar.append(
+                    Mesaj(
+                        id=mid,
+                        metin=metin,
+                        hesap=self._hesap(True, ilk=True),
+                        ts=ts,
+                        paylasim=self.rnd.randint(0, 300),
+                    )
+                )
+                sinif[mid] = gercek_sinif
 
             # --- %10 destek teklifi ---
-            elif zar < 0.22:
+            elif zar < 0.22 + self.sinirda_orani:
                 mid = yeni_id()
-                kalip = self.rnd.choice(DESTEK_KALIPLARI)
+                kalip = self.rnd.choice(self._destek_kalip)
                 mesajlar.append(
                     Mesaj(
                         id=mid,
@@ -203,18 +270,27 @@ class AkisUreteci:
                     )
                 )
 
+                sinif[mid] = "destek"
+
             # --- kalan: gurultu ---
             else:
                 mid = yeni_id()
                 mesajlar.append(
                     Mesaj(
                         id=mid,
-                        metin=self.rnd.choice(GURULTU_KALIPLARI),
+                        metin=self.rnd.choice(self._gurultu_kalip),
                         hesap=self._hesap(True, ilk=True),
                         ts=ts,
                         paylasim=self.rnd.randint(0, 50),
                     )
                 )
+                sinif[mid] = "gurultu"
+
+        # Yazim bozulmasi tum mesajlara uygulanir. Etiketler bozulmus metne
+        # gore turetildigi icin veri kumesi tutarli kalir.
+        if self.gurultu_siddeti > 0:
+            for m in mesajlar:
+                m.metin = boz(m.metin, self.rnd, self.gurultu_siddeti)
 
         mesajlar.sort(key=lambda m: m.ts)
         return Akis(
@@ -223,6 +299,7 @@ class AkisUreteci:
             mesaj_olay=mesaj_olay,
             sahte_mesajlar=sahte,
             iddia_mesajlari=iddialar,
+            mesaj_sinifi=sinif,
         )
 
     # --- ic yardimcilar ---
@@ -251,7 +328,7 @@ class AkisUreteci:
                 kat=olay.kat,
                 kisi=olay.kisi,
             )
-        kalip = CAGRI_KALIPLARI[varyant % len(CAGRI_KALIPLARI)]
+        kalip = self._cagri_kalip[varyant % len(self._cagri_kalip)]
         metin = kalip.format(
             yer=f"{olay.yer} mah",
             sokak=olay.sokak,

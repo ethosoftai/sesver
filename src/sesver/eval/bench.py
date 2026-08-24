@@ -53,8 +53,10 @@ def _gorev_olaylari(gorev, akis: Akis) -> set[str]:
     return {akis.mesaj_olay[c.mesaj.id] for c in gorev.cagrilar if c.mesaj.id in akis.mesaj_olay}
 
 
-def kosum(mesaj_sayisi: int = 20_000, seed: int = 7, saat: float = 12.0) -> tuple[Rapor, list]:
-    akis = AkisUreteci(seed=seed).uret(mesaj_sayisi, saat=saat)
+def kosum(mesaj_sayisi: int = 20_000, seed: int = 7, saat: float = 12.0,
+          gurultu: float = 1.0) -> tuple[Rapor, list]:
+    """``gurultu``: yazim bozulmasi siddeti. 0 = temiz sablon ciktisi."""
+    akis = AkisUreteci(seed=seed, gurultu_siddeti=gurultu).uret(mesaj_sayisi, saat=saat)
     hat = BoruHatti()
 
     t0 = time.perf_counter()

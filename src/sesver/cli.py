@@ -71,7 +71,8 @@ def _demo(args: argparse.Namespace) -> int:
 
 
 def _bench(args: argparse.Namespace) -> int:
-    rapor, _ = bench.kosum(mesaj_sayisi=args.messages, seed=args.seed)
+    rapor, _ = bench.kosum(mesaj_sayisi=args.messages, seed=args.seed,
+                          gurultu=args.gurultu)
     print(rapor.yazdir())
     if args.json:
         with open(args.json, "w", encoding="utf-8") as f:
@@ -134,6 +135,8 @@ def main(argv: list[str] | None = None) -> int:
 
     b = ortak(alt.add_parser("bench", help="SES VER-Bench tam kosum"))
     b.add_argument("--json", help="metrikleri json olarak yaz")
+    b.add_argument("--gurultu", type=float, default=1.0,
+                   help="yazim bozulmasi siddeti; 0 = temiz sablon ciktisi")
     b.set_defaults(fn=_bench)
 
     p = ortak(alt.add_parser("poison", help="zehirleme testi"))

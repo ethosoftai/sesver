@@ -136,3 +136,39 @@ class ModelTriyaj:
             return self._yedek(mesaj)
         etiket, guven = self._model.predict(mesaj.metin)
         return Tur(etiket), float(guven)
+
+
+class BirlesikTriyaj:
+    """Kural ve model hatlarinin asimetrik birlesimi.
+
+    Olcum su bulguyu verdi (bkz. checkpoints/divan-ayikla-rapor.json):
+
+      - Model, gurultu ve cagri ayriminda kural hattini acik ara yener
+        (dogruluk +0,10; gurultu F1 +0,15).
+      - Ama model, sablon-ayrik testte GERCEK YARDIM CAGRILARI KACIRIR.
+        Kural hatti sifir kacirirken model 22 cagri kaybetti.
+
+    Afet baglaminda bu ikisi esit agirlikta degildir: kacirilan cagri geri
+    donusu olmayan bir hatadir, fazladan kuyruga giren kayit yalnizca insan
+    is yuku uretir. Dolayisiyla dogru birlesim simetrik degildir:
+
+        CAGRI  : kural VEYA model  -> anma korunur (birlesim)
+        digeri : model             -> kesinlik kazanilir
+
+    Boylece kural hattinin sifir kacirma ozelligi aynen korunur, modelin
+    gurultuyu ayirma ustunlugu ise kazanilir.
+    """
+
+    def __init__(self, model: Triyajci, kural: Triyajci | None = None) -> None:
+        self.model = model
+        self.kural = kural or KuralTriyaj()
+
+    def __call__(self, mesaj: Mesaj) -> tuple[Tur, float]:
+        k_tur, k_guven = self.kural(mesaj)
+        m_tur, m_guven = self.model(mesaj)
+
+        # Iki hattan biri bile CAGRI diyorsa cagridir.
+        if Tur.CAGRI in (k_tur, m_tur):
+            return Tur.CAGRI, max(k_guven if k_tur is Tur.CAGRI else 0.0,
+                                  m_guven if m_tur is Tur.CAGRI else 0.0)
+        return m_tur, m_guven
